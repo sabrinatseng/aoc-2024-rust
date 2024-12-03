@@ -22,18 +22,12 @@ fn is_safe(report: Vec<u32>) -> bool {
 
 // Compute if two numbers are gradually increasing
 fn is_gradually_increasing(window: &[u32; 2]) -> bool {
-    window[1] > window[0] && is_gradual(window)
+    window[1] > window[0] && (1..=3).contains(&window[1].abs_diff(window[0]))
 }
 
 // Compute if two numbers are gradually decreasing
 fn is_gradually_decreasing(window: &[u32; 2]) -> bool {
-    window[1] < window[0] && is_gradual(window)
-}
-
-// Compute if two numbers are either gradually increasing or decreasing
-fn is_gradual(window: &[u32; 2]) -> bool {
-    let abs_diff = window[1].abs_diff(window[0]);
-    abs_diff >= 1 && abs_diff <= 3
+    window[1] < window[0] && (1..=3).contains(&window[1].abs_diff(window[0]))
 }
 
 pub fn part_two(input: &str) -> Option<u32> {

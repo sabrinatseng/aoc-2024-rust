@@ -21,7 +21,7 @@ fn parse_and_multiply(a: &str, b: &str) -> u32 {
 fn parse_match(match_: &str) -> u32 {
     match_
         .parse()
-        .expect(&format!("Failed to parse regex match {match_} into u32"))
+        .unwrap_or_else(|_| panic!("Failed to parse regex match {match_} into u32"))
 }
 
 pub fn part_two(input: &str) -> Option<u32> {
