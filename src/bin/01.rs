@@ -1,19 +1,13 @@
+use advent_of_code::parse_from_lines;
 use itertools::Itertools;
 
 advent_of_code::solution!(1);
 
 // Parse input into left list and right list of equal length
 fn parse_lists(input: &str) -> (Vec<u32>, Vec<u32>) {
-    input
-        .lines()
-        .map(|line| {
-            line.split_whitespace()
-                .map(str::parse::<u32>)
-                .map(|res| res.expect("Failed to parse into u32"))
-                .collect_tuple()
-                .expect(&format!("Line {line} does not have 2 numbers"))
-        })
-        .unzip::<_, _, Vec<_>, Vec<_>>()
+    parse_from_lines::<u32>(input)
+        .map(|iter| iter.collect_tuple().expect("Line does not have 2 numbers"))
+        .unzip()
 }
 
 pub fn part_one(input: &str) -> Option<u32> {
