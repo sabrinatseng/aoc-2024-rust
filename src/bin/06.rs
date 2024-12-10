@@ -1,5 +1,6 @@
 use std::collections::HashSet;
 
+use advent_of_code::Coord;
 use itertools::Itertools;
 
 advent_of_code::solution!(6);
@@ -29,27 +30,6 @@ impl Direction {
             Self::Left => Self::Up,
             Self::Right => Self::Down,
         }
-    }
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-struct Coord {
-    x: usize,
-    y: usize,
-}
-
-impl Coord {
-    fn new(x: usize, y: usize) -> Coord {
-        Coord { x, y }
-    }
-    fn step(&self, dx: i32, dy: i32) -> Option<Coord> {
-        let new_x = self.x as i32 + dx;
-        let new_y = self.y as i32 + dy;
-        if new_x < 0 || new_y < 0 {
-            return None;
-        }
-
-        Some(Coord::new(new_x as usize, new_y as usize))
     }
 }
 
