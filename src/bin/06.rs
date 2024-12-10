@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use advent_of_code::Coord;
+use advent_of_code::{get_grid_dimensions, Coord};
 use itertools::Itertools;
 
 advent_of_code::solution!(6);
@@ -87,9 +87,7 @@ fn parse(input: &str) -> Map {
     let mut start = None;
     let mut obstructions = HashSet::new();
 
-    let y_dim = input.lines().count();
-    let x_dim = input.lines().next().unwrap().len();
-    let dimensions = Coord::new(x_dim, y_dim);
+    let dimensions = get_grid_dimensions(input);
 
     // Reverse the lines since our coordinate system has (0, 0) in the bottom left
     for (y, line) in input.lines().rev().enumerate() {

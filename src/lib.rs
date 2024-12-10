@@ -2,7 +2,7 @@ use std::{fmt::Debug, str::FromStr};
 
 pub mod template;
 
-// Parse input string into Vec of Vec of multiple items per line
+/// Parse input string into Vec of Vec of multiple items per line
 pub fn parse_from_lines<'a, T>(
     input: &'a str,
 ) -> impl Iterator<Item = impl Iterator<Item = T> + 'a> + 'a
@@ -44,4 +44,12 @@ impl Coord {
             self.y as i32 - other.y as i32,
         )
     }
+}
+
+/// Assuming input is a 2-dimensional rectangular grid (i.e. all lines
+/// are the same length), return the dimensions of the grid.
+pub fn get_grid_dimensions(input: &str) -> Coord {
+    let y_dim = input.lines().count();
+    let x_dim = input.lines().next().unwrap().len();
+    Coord::new(x_dim, y_dim)
 }

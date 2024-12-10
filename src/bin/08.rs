@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
-use advent_of_code::Coord;
+use advent_of_code::{get_grid_dimensions, Coord};
 
 advent_of_code::solution!(8);
 
@@ -17,9 +17,7 @@ impl Map {
 }
 
 fn parse(input: &str) -> Map {
-    let y_dim = input.lines().count();
-    let x_dim = input.lines().next().unwrap().len();
-    let dimensions = Coord::new(x_dim, y_dim);
+    let dimensions = get_grid_dimensions(input);
 
     let mut antennas: HashMap<char, Vec<Coord>> = HashMap::new();
     for (y, line) in input.lines().rev().enumerate() {
