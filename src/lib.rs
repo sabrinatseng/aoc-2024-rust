@@ -45,6 +45,10 @@ pub struct Dimensions {
 }
 
 impl Dimensions {
+    pub fn new(x: usize, y: usize) -> Self {
+        Dimensions { x, y }
+    }
+
     /// Assuming input is a 2-dimensional rectangular grid (i.e. all lines
     /// are the same length), return the dimensions of the grid.
     pub fn from_input(input: &str) -> Dimensions {
@@ -55,6 +59,29 @@ impl Dimensions {
 
     pub fn in_bounds(&self, coord: &Coord) -> bool {
         coord.x >= 0 && (coord.x as usize) < self.x && coord.y >= 0 && (coord.y as usize) < self.y
+    }
+
+    /// If coord is out of bounds, wrap around to the other side
+    pub fn wrap(&self, coord: &Coord) -> Coord {
+        let new_x = if coord.x < 0 {
+            let diff = (-coord.x) % self.x as i64;
+            (self.x as i64 - diff) % self.x as i64
+        } else if coord.x > self.x as i64 {
+            (coord.x - self.x as i64) % self.x as i64
+        } else {
+            coord.x
+        };
+
+        let new_y = if coord.y < 0 {
+            let diff = (-coord.y) % self.y as i64;
+            (self.y as i64 - diff) % self.y as i64
+        } else if coord.y > self.y as i64 {
+            (coord.y - self.y as i64) % self.y as i64
+        } else {
+            coord.y
+        };
+
+        Coord::new(new_x, new_y)
     }
 }
 
@@ -118,5 +145,41 @@ impl<T: Clone> Grid<T> {
         }
 
         positions
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_dim_wrap() {
+        let dim = Dimensions::new(10, 10);
+
+        // no wrap around
+        assert_eq!(dim.wrap(&Coord::new(5, 5)), Coord::new(5, 5));
+
+        // single wrap around for x
+        assert_eq!(dim.wrap(&Coord::new(-2, 0)), Coord::new(8, 0));
+        assert_eq!(dim.wrap(&Coord::new(12, 0)), Coord::new(2, 0));
+
+        // single wrap around for y
+        assert_eq!(dim.wrap(&Coord::new(0, -2)), Coord::new(0, 8));
+        assert_eq!(dim.wrap(&Coord::new(0, 12)), Coord::new(0, 2));
+
+        // single wrap around for both
+        assert_eq!(dim.wrap(&Coord::new(-2, 12)), Coord::new(8, 2));
+
+        // double wrap around
+        assert_eq!(dim.wrap(&Coord::new(-12, 0)), Coord::new(8, 0));
+
+        // multiple wrap around on the edges
+        assert_eq!(dim.wrap(&Coord::new(0, -200)), Coord::new(0, 0));
+
+        // regression test
+        assert_eq!(
+            Dimensions::new(11, 7).wrap(&Coord::new(4, -100)),
+            Coord::new(4, 5)
+        );
     }
 }
