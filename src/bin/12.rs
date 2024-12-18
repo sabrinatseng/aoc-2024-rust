@@ -1,71 +1,8 @@
 use std::collections::{HashSet, VecDeque};
 
-use advent_of_code::{get_grid_dimensions, Coord};
+use advent_of_code::{Coord, Dimensions, Grid};
 
 advent_of_code::solution!(12);
-
-struct Map {
-    dimensions: Coord,
-    vals: Vec<Vec<char>>,
-}
-
-impl Map {
-    fn get_neighbors<'a>(&'a self, coord: &'a Coord) -> impl Iterator<Item = Coord> + 'a {
-        [(1, 0), (-1, 0), (0, 1), (0, -1)]
-            .into_iter()
-            .filter_map(|(dx, dy)| coord.step(dx, dy))
-            .filter(|coord| self.is_in_bounds(coord))
-    }
-
-    fn is_in_bounds(&self, coord: &Coord) -> bool {
-        coord.x < self.dimensions.x && coord.y < self.dimensions.y
-    }
-
-    fn get(&self, coord: &Coord) -> Option<char> {
-        self.vals.get(coord.y)?.get(coord.x).copied()
-    }
-
-    fn find_regions(&self) -> Vec<Region> {
-        let mut visited = HashSet::new();
-        let mut regions = Vec::new();
-
-        for x in 0..self.dimensions.x {
-            for y in 0..self.dimensions.y {
-                let coord = Coord::new(x, y);
-                if visited.contains(&coord) {
-                    continue;
-                }
-
-                let mut region = Region::new();
-                region.insert(coord);
-                let val = self.get(&coord).unwrap();
-
-                let mut to_visit = VecDeque::new();
-                to_visit.push_back(coord);
-
-                // Use "flood fill" technique to find all coords in this region
-                while let Some(next) = to_visit.pop_front() {
-                    for neighbor in self.get_neighbors(&next) {
-                        if visited.contains(&neighbor) {
-                            continue;
-                        }
-
-                        if self.get(&neighbor) == Some(val) {
-                            // this neighbor is part of the region
-                            region.insert(neighbor);
-                            visited.insert(neighbor);
-                            to_visit.push_back(neighbor);
-                        }
-                    }
-                }
-
-                regions.push(region);
-            }
-        }
-
-        regions
-    }
-}
 
 pub struct Region(HashSet<Coord>);
 
@@ -86,13 +23,13 @@ impl Region {
         self.0.len() as u32
     }
 
-    fn compute_perimeter(&self, map: &Map) -> u32 {
+    fn compute_perimeter(&self, grid: &Grid<char>) -> u32 {
         // The perimeter of a region is the number of sides of garden plots in the region
         // that do not touch another garden plot in the same region
         let mut perimeter = 0;
         for coord in &self.0 {
             let mut count_touching_another_plot = 0;
-            for neighbor in map.get_neighbors(coord) {
+            for neighbor in grid.get_neighbors(coord) {
                 if self.contains(&neighbor) {
                     count_touching_another_plot += 1;
                 }
@@ -104,15 +41,13 @@ impl Region {
         perimeter
     }
 
-    fn neighbor_in_region(&self, map: &Map, coord: &Coord, dx: i32, dy: i32) -> bool {
-        coord
-            .step(dx, dy)
-            .filter(|coord| map.is_in_bounds(coord))
-            .map(|coord| self.contains(&coord))
-            .unwrap_or_default()
+    fn neighbor_in_region(&self, grid: &Grid<char>, coord: &Coord, dx: i64, dy: i64) -> bool {
+        let coord = coord.step(dx, dy);
+
+        grid.in_bounds(&coord) && self.contains(&coord)
     }
 
-    fn all_neighbors(&self, map: &Map) -> HashSet<Coord> {
+    fn all_neighbors(&self, map: &Grid<char>) -> HashSet<Coord> {
         self.0
             .iter()
             .flat_map(|coord| map.get_neighbors(coord))
@@ -122,7 +57,7 @@ impl Region {
             .collect()
     }
 
-    fn compute_number_of_sides(&self, map: &Map) -> u32 {
+    fn compute_number_of_sides(&self, map: &Grid<char>) -> u32 {
         // Under the bulk discount, instead of using the perimeter to calculate the price,
         // you need to use the number of sides each region has.
         // Each straight section of fence counts as a side, regardless of how long it is.
@@ -195,36 +130,75 @@ impl Region {
     }
 }
 
-fn parse(input: &str) -> Map {
-    let dimensions = get_grid_dimensions(input);
-    let vals = input
+fn parse(input: &str) -> Grid<char> {
+    let dimensions = Dimensions::from_input(input);
+    let values = input
         .lines()
         .rev()
         .map(|line| line.chars().collect())
         .collect();
 
-    Map { dimensions, vals }
+    Grid::new(dimensions, values)
+}
+
+fn find_regions(grid: &Grid<char>) -> Vec<Region> {
+    let mut visited = HashSet::new();
+    let mut regions = Vec::new();
+
+    for x in 0..grid.dimensions.x {
+        for y in 0..grid.dimensions.y {
+            let coord = Coord::new(x as i64, y as i64);
+            if visited.contains(&coord) {
+                continue;
+            }
+
+            let mut region = Region::new();
+            region.insert(coord);
+            let val = grid.get(&coord).unwrap();
+
+            let mut to_visit = VecDeque::new();
+            to_visit.push_back(coord);
+
+            // Use "flood fill" technique to find all coords in this region
+            while let Some(next) = to_visit.pop_front() {
+                for neighbor in grid.get_neighbors(&next) {
+                    if visited.contains(&neighbor) {
+                        continue;
+                    }
+
+                    if grid.get(&neighbor) == Some(val) {
+                        // this neighbor is part of the region
+                        region.insert(neighbor);
+                        visited.insert(neighbor);
+                        to_visit.push_back(neighbor);
+                    }
+                }
+            }
+
+            regions.push(region);
+        }
+    }
+
+    regions
 }
 
 pub fn part_one(input: &str) -> Option<u32> {
-    let map = parse(input);
+    let grid = parse(input);
 
-    let price = map
-        .find_regions()
+    let price = find_regions(&grid)
         .into_iter()
-        .map(|region| region.compute_area() * region.compute_perimeter(&map))
+        .map(|region| region.compute_area() * region.compute_perimeter(&grid))
         .sum();
 
     Some(price)
 }
 
 pub fn part_two(input: &str) -> Option<u32> {
-    let map = parse(input);
+    let grid = parse(input);
 
-    let price = map
-        .find_regions()
+    let price = find_regions(&grid)
         .into_iter()
-        .map(|region| region.compute_area() * region.compute_number_of_sides(&map))
+        .map(|region| region.compute_area() * region.compute_number_of_sides(&grid))
         .sum();
 
     Some(price)

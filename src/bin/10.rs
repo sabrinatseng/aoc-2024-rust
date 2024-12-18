@@ -1,51 +1,27 @@
 use std::collections::HashSet;
 
-use advent_of_code::{get_grid_dimensions, Coord};
+use advent_of_code::{Dimensions, Grid};
 
 advent_of_code::solution!(10);
 
-struct Map {
-    dimensions: Coord,
-    map: Vec<Vec<u8>>,
-}
+fn parse(input: &str) -> Grid<u8> {
+    let dimensions = Dimensions::from_input(input);
 
-impl Map {
-    fn positions_of(&self, val: u8) -> HashSet<Coord> {
-        let mut positions = HashSet::new();
-        for x in 0..self.dimensions.x {
-            for y in 0..self.dimensions.y {
-                if self.get(&Coord::new(x, y)) == Some(val) {
-                    positions.insert(Coord::new(x, y));
-                }
-            }
-        }
-
-        positions
-    }
-
-    fn get(&self, coord: &Coord) -> Option<u8> {
-        self.map.get(coord.y)?.get(coord.x).copied()
-    }
-}
-
-fn parse(input: &str) -> Map {
-    let dimensions = get_grid_dimensions(input);
-
-    let map = input
+    let values = input
         .lines()
         .rev()
         .map(|line| line.chars().map(|c| (c as u8) - 48).collect())
         .collect();
 
-    Map { dimensions, map }
+    Grid { dimensions, values }
 }
 
 pub fn part_one(input: &str) -> Option<u32> {
-    let map = parse(input);
+    let grid = parse(input);
 
     let mut score = 0;
 
-    for trailhead in map.positions_of(0) {
+    for trailhead in grid.positions_of(&0) {
         // BFS style search
         // Start with the trailhead
         let mut pending = HashSet::new();
@@ -56,10 +32,9 @@ pub fn part_one(input: &str) -> Option<u32> {
             let mut new_pending = HashSet::new();
             for position in pending {
                 for (dx, dy) in [(0, 1), (0, -1), (1, 0), (-1, 0)] {
-                    if let Some(coord) = position.step(dx, dy) {
-                        if map.get(&coord) == Some(i) {
-                            new_pending.insert(coord);
-                        }
+                    let coord = position.step(dx, dy);
+                    if grid.get(&coord) == Some(i) {
+                        new_pending.insert(coord);
                     }
                 }
             }
@@ -75,11 +50,11 @@ pub fn part_one(input: &str) -> Option<u32> {
 }
 
 pub fn part_two(input: &str) -> Option<u32> {
-    let map = parse(input);
+    let grid = parse(input);
 
     let mut score = 0;
 
-    for trailhead in map.positions_of(0) {
+    for trailhead in grid.positions_of(&0) {
         // BFS style search
         // Start with the trailhead
         // Store the latest position of the trail - note there can be duplicates if there are multiple
@@ -91,10 +66,9 @@ pub fn part_two(input: &str) -> Option<u32> {
             let mut new_pending = Vec::new();
             for position in pending {
                 for (dx, dy) in [(0, 1), (0, -1), (1, 0), (-1, 0)] {
-                    if let Some(coord) = position.step(dx, dy) {
-                        if map.get(&coord) == Some(i) {
-                            new_pending.push(coord);
-                        }
+                    let coord = position.step(dx, dy);
+                    if grid.get(&coord) == Some(i) {
+                        new_pending.push(coord);
                     }
                 }
             }

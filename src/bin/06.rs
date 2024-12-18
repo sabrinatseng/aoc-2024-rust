@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use advent_of_code::{get_grid_dimensions, Coord};
+use advent_of_code::{Coord, Dimensions};
 use itertools::Itertools;
 
 advent_of_code::solution!(6);
@@ -14,7 +14,7 @@ enum Direction {
 }
 
 impl Direction {
-    fn to_dx_dy(self) -> (i32, i32) {
+    fn to_dx_dy(self) -> (i64, i64) {
         match self {
             Self::Up => (0, 1),
             Self::Down => (0, -1),
@@ -35,14 +35,14 @@ impl Direction {
 
 #[derive(Clone)]
 struct Map {
-    dimensions: Coord,
+    dimensions: Dimensions,
     curr_pos: Coord,
     curr_dir: Direction,
     obstructions: HashSet<Coord>,
 }
 
 impl Map {
-    fn new(dimensions: Coord, start: Coord, obstructions: HashSet<Coord>) -> Self {
+    fn new(dimensions: Dimensions, start: Coord, obstructions: HashSet<Coord>) -> Self {
         Self {
             dimensions,
             curr_pos: start,
@@ -56,10 +56,10 @@ impl Map {
     fn step(&mut self) -> Option<Coord> {
         // Try to step in the current direction
         let (dx, dy) = self.curr_dir.to_dx_dy();
-        let coord = self.curr_pos.step(dx, dy)?;
+        let coord = self.curr_pos.step(dx, dy);
 
         // exited the map
-        if !self.check_in_bounds(&coord) {
+        if !self.dimensions.in_bounds(&coord) {
             return None;
         }
 
@@ -74,10 +74,6 @@ impl Map {
         }
     }
 
-    fn check_in_bounds(&self, coord: &Coord) -> bool {
-        coord.x < self.dimensions.x && coord.y < self.dimensions.y
-    }
-
     fn add_obstruction(&mut self, coord: Coord) {
         self.obstructions.insert(coord);
     }
@@ -87,16 +83,16 @@ fn parse(input: &str) -> Map {
     let mut start = None;
     let mut obstructions = HashSet::new();
 
-    let dimensions = get_grid_dimensions(input);
+    let dimensions = Dimensions::from_input(input);
 
     // Reverse the lines since our coordinate system has (0, 0) in the bottom left
     for (y, line) in input.lines().rev().enumerate() {
         if let Some(x) = line.chars().position(|c| c == '^') {
-            start = Some(Coord::new(x, y));
+            start = Some(Coord::new(x as i64, y as i64));
         }
 
         for x in line.chars().positions(|c| c == '#') {
-            obstructions.insert(Coord::new(x, y));
+            obstructions.insert(Coord::new(x as i64, y as i64));
         }
     }
 

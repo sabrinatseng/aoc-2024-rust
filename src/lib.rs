@@ -1,4 +1,4 @@
-use std::{fmt::Debug, str::FromStr};
+use std::{collections::HashSet, fmt::Debug, str::FromStr};
 
 pub mod template;
 
@@ -19,37 +19,104 @@ where
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct Coord {
+    pub x: i64,
+    pub y: i64,
+}
+
+impl Coord {
+    pub fn new(x: i64, y: i64) -> Coord {
+        Coord { x, y }
+    }
+
+    pub fn step(&self, dx: i64, dy: i64) -> Coord {
+        Coord::new(self.x + dx, self.y + dy)
+    }
+
+    pub fn diff(&self, other: &Coord) -> (i64, i64) {
+        (self.x - other.x, self.y - other.y)
+    }
+}
+
+/// Dimensions of a 2D grid.
+#[derive(Clone, Copy, Debug)]
+pub struct Dimensions {
     pub x: usize,
     pub y: usize,
 }
 
-impl Coord {
-    pub fn new(x: usize, y: usize) -> Coord {
-        Coord { x, y }
+impl Dimensions {
+    /// Assuming input is a 2-dimensional rectangular grid (i.e. all lines
+    /// are the same length), return the dimensions of the grid.
+    pub fn from_input(input: &str) -> Dimensions {
+        let y_dim = input.lines().count();
+        let x_dim = input.lines().next().unwrap().len();
+        Dimensions { x: x_dim, y: y_dim }
     }
 
-    pub fn step(&self, dx: i32, dy: i32) -> Option<Coord> {
-        let new_x = self.x as i32 + dx;
-        let new_y = self.y as i32 + dy;
-        if new_x < 0 || new_y < 0 {
-            return None;
-        }
-
-        Some(Coord::new(new_x as usize, new_y as usize))
-    }
-
-    pub fn diff(&self, other: &Coord) -> (i32, i32) {
-        (
-            self.x as i32 - other.x as i32,
-            self.y as i32 - other.y as i32,
-        )
+    pub fn in_bounds(&self, coord: &Coord) -> bool {
+        coord.x >= 0 && (coord.x as usize) < self.x && coord.y >= 0 && (coord.y as usize) < self.y
     }
 }
 
-/// Assuming input is a 2-dimensional rectangular grid (i.e. all lines
-/// are the same length), return the dimensions of the grid.
-pub fn get_grid_dimensions(input: &str) -> Coord {
-    let y_dim = input.lines().count();
-    let x_dim = input.lines().next().unwrap().len();
-    Coord::new(x_dim, y_dim)
+#[derive(Clone)]
+pub struct Grid<T> {
+    pub dimensions: Dimensions,
+    pub values: Vec<Vec<T>>,
+}
+
+impl<T: Clone> Grid<T> {
+    pub fn new(dimensions: Dimensions, values: Vec<Vec<T>>) -> Self {
+        assert_eq!(dimensions.x, values[0].len());
+        assert_eq!(dimensions.y, values.len());
+        Grid { dimensions, values }
+    }
+
+    pub fn in_bounds(&self, coord: &Coord) -> bool {
+        self.dimensions.in_bounds(coord)
+    }
+
+    pub fn get(&self, coord: &Coord) -> Option<T> {
+        if !self.in_bounds(coord) {
+            return None;
+        }
+
+        self.values
+            .get(coord.y as usize)?
+            .get(coord.x as usize)
+            .cloned()
+    }
+
+    pub fn get_neighbors<'a>(&'a self, coord: &'a Coord) -> impl Iterator<Item = Coord> + 'a {
+        [(1, 0), (-1, 0), (0, 1), (0, -1)]
+            .into_iter()
+            .map(|(dx, dy)| coord.step(dx, dy))
+            .filter(|coord| self.in_bounds(coord))
+    }
+
+    pub fn get_diagonal_neighbors<'a>(
+        &'a self,
+        coord: &'a Coord,
+    ) -> impl Iterator<Item = Coord> + 'a {
+        [(1, -1), (-1, 1), (1, 1), (-1, -1)]
+            .into_iter()
+            .map(|(dx, dy)| coord.step(dx, dy))
+            .filter(|coord| self.in_bounds(coord))
+    }
+
+    pub fn positions_of(&self, val: &T) -> HashSet<Coord>
+    where
+        T: PartialEq,
+    {
+        let mut positions = HashSet::new();
+        for x in 0..self.dimensions.x {
+            for y in 0..self.dimensions.y {
+                let coord = Coord::new(x as i64, y as i64);
+                if self.get(&coord).as_ref() == Some(val) {
+                    positions.insert(coord);
+                }
+            }
+        }
+
+        positions
+    }
 }
