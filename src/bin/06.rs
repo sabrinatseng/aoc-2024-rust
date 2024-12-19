@@ -1,37 +1,9 @@
 use std::collections::HashSet;
 
-use advent_of_code::{Coord, Dimensions};
+use advent_of_code::{Coord, Dimensions, Direction};
 use itertools::Itertools;
 
 advent_of_code::solution!(6);
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-enum Direction {
-    Up,
-    Down,
-    Left,
-    Right,
-}
-
-impl Direction {
-    fn to_dx_dy(self) -> (i64, i64) {
-        match self {
-            Self::Up => (0, 1),
-            Self::Down => (0, -1),
-            Self::Left => (-1, 0),
-            Self::Right => (1, 0),
-        }
-    }
-
-    fn turn(&self) -> Self {
-        match &self {
-            Self::Up => Self::Right,
-            Self::Down => Self::Left,
-            Self::Left => Self::Up,
-            Self::Right => Self::Down,
-        }
-    }
-}
 
 #[derive(Clone)]
 struct Map {
@@ -69,7 +41,7 @@ impl Map {
             Some(coord)
         } else {
             // hit an obstruction, so we should turn and stay in the same position
-            self.curr_dir = self.curr_dir.turn();
+            self.curr_dir = self.curr_dir.turn_right();
             Some(self.curr_pos)
         }
     }

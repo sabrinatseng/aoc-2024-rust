@@ -18,6 +18,34 @@ where
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum Direction {
+    Up,
+    Down,
+    Left,
+    Right,
+}
+
+impl Direction {
+    pub fn to_dx_dy(self) -> (i64, i64) {
+        match self {
+            Self::Up => (0, 1),
+            Self::Down => (0, -1),
+            Self::Left => (-1, 0),
+            Self::Right => (1, 0),
+        }
+    }
+
+    pub fn turn_right(&self) -> Self {
+        match &self {
+            Self::Up => Self::Right,
+            Self::Down => Self::Left,
+            Self::Left => Self::Up,
+            Self::Right => Self::Down,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct Coord {
     pub x: i64,
     pub y: i64,
@@ -30,6 +58,11 @@ impl Coord {
 
     pub fn step(&self, dx: i64, dy: i64) -> Coord {
         Coord::new(self.x + dx, self.y + dy)
+    }
+
+    pub fn step_in_direction(&self, direction: Direction) -> Coord {
+        let (dx, dy) = direction.to_dx_dy();
+        self.step(dx, dy)
     }
 
     pub fn diff(&self, other: &Coord) -> (i64, i64) {
