@@ -43,6 +43,15 @@ impl Direction {
             Self::Right => Self::Down,
         }
     }
+
+    pub fn turn_left(&self) -> Self {
+        match &self {
+            Self::Up => Self::Left,
+            Self::Down => Self::Right,
+            Self::Left => Self::Down,
+            Self::Right => Self::Up,
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
