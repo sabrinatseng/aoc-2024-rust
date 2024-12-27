@@ -79,6 +79,12 @@ impl Coord {
     }
 }
 
+impl From<(i64, i64)> for Coord {
+    fn from((x, y): (i64, i64)) -> Self {
+        Coord::new(x, y)
+    }
+}
+
 /// Dimensions of a 2D grid.
 #[derive(Clone, Copy, Debug)]
 pub struct Dimensions {
@@ -125,6 +131,47 @@ impl Dimensions {
 
         Coord::new(new_x, new_y)
     }
+
+    pub fn get_neighbors<'a>(&'a self, coord: &'a Coord) -> impl Iterator<Item = Coord> + 'a {
+        [(1, 0), (-1, 0), (0, 1), (0, -1)]
+            .into_iter()
+            .map(|(dx, dy)| coord.step(dx, dy))
+            .filter(|coord| self.in_bounds(coord))
+    }
+
+    pub fn get_diagonal_neighbors<'a>(
+        &'a self,
+        coord: &'a Coord,
+    ) -> impl Iterator<Item = Coord> + 'a {
+        [(1, -1), (-1, 1), (1, 1), (-1, -1)]
+            .into_iter()
+            .map(|(dx, dy)| coord.step(dx, dy))
+            .filter(|coord| self.in_bounds(coord))
+    }
+
+    pub fn small_corner(&self) -> Coord {
+        Coord::new(0, 0)
+    }
+
+    pub fn large_corner(&self) -> Coord {
+        Coord::new(self.x as i64 - 1, self.y as i64 - 1)
+    }
+
+    pub fn left_borders(&self) -> impl Iterator<Item = Coord> + '_ {
+        (0..self.y).map(|y| Coord::new(0, y as i64))
+    }
+
+    pub fn right_borders(&self) -> impl Iterator<Item = Coord> + '_ {
+        (0..self.y).map(|y| Coord::new(self.x as i64 - 1, y as i64))
+    }
+
+    pub fn bottom_borders(&self) -> impl Iterator<Item = Coord> + '_ {
+        (0..self.x).map(|x| Coord::new(x as i64, 0))
+    }
+
+    pub fn top_borders(&self) -> impl Iterator<Item = Coord> + '_ {
+        (0..self.x).map(|x| Coord::new(x as i64, self.y as i64 - 1))
+    }
 }
 
 #[derive(Clone)]
@@ -156,20 +203,14 @@ impl<T: Clone> Grid<T> {
     }
 
     pub fn get_neighbors<'a>(&'a self, coord: &'a Coord) -> impl Iterator<Item = Coord> + 'a {
-        [(1, 0), (-1, 0), (0, 1), (0, -1)]
-            .into_iter()
-            .map(|(dx, dy)| coord.step(dx, dy))
-            .filter(|coord| self.in_bounds(coord))
+        self.dimensions.get_neighbors(coord)
     }
 
     pub fn get_diagonal_neighbors<'a>(
         &'a self,
         coord: &'a Coord,
     ) -> impl Iterator<Item = Coord> + 'a {
-        [(1, -1), (-1, 1), (1, 1), (-1, -1)]
-            .into_iter()
-            .map(|(dx, dy)| coord.step(dx, dy))
-            .filter(|coord| self.in_bounds(coord))
+        self.dimensions.get_diagonal_neighbors(coord)
     }
 
     pub fn positions_of(&self, val: &T) -> HashSet<Coord>
