@@ -1,49 +1,8 @@
 use std::collections::{BinaryHeap, HashMap, HashSet};
 
-use advent_of_code::{Coord, Direction};
+use advent_of_code::{parse_maze, Coord, Direction, Maze};
 
 advent_of_code::solution!(16);
-
-struct Maze {
-    start: Coord,
-    end: Coord,
-    walls: HashSet<Coord>,
-}
-
-impl Maze {
-    fn start_state(&self) -> State {
-        State {
-            pos: self.start,
-            dir: Direction::Right,
-        }
-    }
-}
-
-fn parse(input: &str) -> Maze {
-    let mut start = None;
-    let mut end = None;
-    let mut walls = HashSet::new();
-
-    // Use coordinate system with (0,0) at bottom left
-    for (y, line) in input.lines().rev().enumerate() {
-        for (x, c) in line.chars().enumerate() {
-            let coord = Coord::new(x as i64, y as i64);
-            if c == 'S' {
-                start = Some(coord);
-            } else if c == 'E' {
-                end = Some(coord);
-            } else if c == '#' {
-                walls.insert(coord);
-            }
-        }
-    }
-
-    Maze {
-        start: start.expect("Did not find starting position S"),
-        end: end.expect("Did not find end position E"),
-        walls,
-    }
-}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 struct State {
@@ -52,6 +11,13 @@ struct State {
 }
 
 impl State {
+    fn start_state(maze: &Maze) -> State {
+        State {
+            pos: maze.start,
+            dir: Direction::Right,
+        }
+    }
+
     fn step(&self) -> Self {
         Self {
             pos: self.pos.step_in_direction(self.dir),
@@ -113,7 +79,7 @@ impl PartialOrd for PqState {
 fn find_lowest_score(maze: &Maze) -> Option<usize> {
     let start_pq_state = PqState {
         score_so_far: 0,
-        state: maze.start_state(),
+        state: State::start_state(maze),
     };
 
     // Use heap as a priority queue
@@ -173,7 +139,7 @@ fn find_lowest_score(maze: &Maze) -> Option<usize> {
 }
 
 pub fn part_one(input: &str) -> Option<u32> {
-    let maze = parse(input);
+    let maze = parse_maze(input);
 
     let score = find_lowest_score(&maze).unwrap();
 
@@ -204,7 +170,7 @@ impl PartialOrd for PqState2 {
 fn find_lowest_score_seats(maze: &Maze) -> HashSet<Coord> {
     let start_pq_state = PqState2 {
         score_so_far: 0,
-        state: maze.start_state(),
+        state: State::start_state(maze),
         path: HashSet::from([maze.start]),
     };
 
@@ -283,7 +249,7 @@ fn find_lowest_score_seats(maze: &Maze) -> HashSet<Coord> {
 }
 
 pub fn part_two(input: &str) -> Option<u32> {
-    let maze = parse(input);
+    let maze = parse_maze(input);
 
     let lowest_score_seats = find_lowest_score_seats(&maze);
 

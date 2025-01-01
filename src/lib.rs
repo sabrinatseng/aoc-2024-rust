@@ -231,6 +231,38 @@ impl<T: Clone> Grid<T> {
     }
 }
 
+pub struct Maze {
+    pub start: Coord,
+    pub end: Coord,
+    pub walls: HashSet<Coord>,
+}
+
+pub fn parse_maze(input: &str) -> Maze {
+    let mut start = None;
+    let mut end = None;
+    let mut walls = HashSet::new();
+
+    // Use coordinate system with (0,0) at bottom left
+    for (y, line) in input.lines().rev().enumerate() {
+        for (x, c) in line.chars().enumerate() {
+            let coord = Coord::new(x as i64, y as i64);
+            if c == 'S' {
+                start = Some(coord);
+            } else if c == 'E' {
+                end = Some(coord);
+            } else if c == '#' {
+                walls.insert(coord);
+            }
+        }
+    }
+
+    Maze {
+        start: start.expect("Did not find starting position S"),
+        end: end.expect("Did not find end position E"),
+        walls,
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
