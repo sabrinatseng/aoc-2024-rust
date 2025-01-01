@@ -1,6 +1,8 @@
-use std::{collections::VecDeque, fmt::Display};
+use std::collections::VecDeque;
 
 use itertools::Itertools;
+
+use bits_2::Bits2;
 
 advent_of_code::solution!(17);
 
@@ -116,6 +118,10 @@ fn run_program(registers: &mut [u64; 3], program: Vec<u8>) -> Vec<u8> {
 }
 
 pub fn part_two(input: &str) -> Option<u64> {
+    part_two_inner::<Bits2>(input)
+}
+
+fn part_two_inner<B: Bits>(input: &str) -> Option<u64> {
     // The program is as follows:
     // 2,4: B = A mod 8 (lowest 3 bits of A)                    <- call this a_mod_8
     // 1,6: B = B ^ 6 (110)                                     <- call this constrained_bits_idx
@@ -144,7 +150,7 @@ pub fn part_two(input: &str) -> Option<u64> {
     // BFS search
     let mut queue = VecDeque::new();
     let start_state = State {
-        bits: Bits::new(),
+        bits: B::new(),
         output_idx: 0,
     };
     queue.push_back(start_state);
@@ -187,101 +193,176 @@ pub fn part_two(input: &str) -> Option<u64> {
 }
 
 #[derive(Clone, Debug)]
-struct State {
-    bits: Bits,
+struct State<B: Bits> {
+    bits: B,
     output_idx: usize,
 }
 
-#[derive(Clone, Copy, Debug)]
-enum Bit {
-    Unset,     // bit can have any value
-    Set(bool), // constrains the bit to this value
-}
-
-impl Bit {
-    fn unwrap(&self) -> u64 {
-        match &self {
-            Bit::Unset => 0,
-            Bit::Set(val) => *val as u64,
-        }
-    }
-
-    // Check if there is a contradiction
-    fn check(&self, other: Self) -> bool {
-        match (&self, &other) {
-            (Bit::Set(val1), Bit::Set(val2)) => val1 == val2,
-            _ => true,
-        }
-    }
-}
-
-// max length is 3 * 16 (length of program) + 7
-const MAX_LEN_BITS: usize = 3 * 16 + 7;
-
-#[derive(Clone, Debug)]
-struct Bits {
-    // LSB at index 0
-    bits: [Bit; MAX_LEN_BITS],
-}
-
-impl Bits {
-    fn new() -> Self {
-        Self {
-            bits: [Bit::Unset; MAX_LEN_BITS],
-        }
-    }
+// Create a trait for the bit representation which will be implemented in different ways
+trait Bits: Sized {
+    fn new() -> Self;
 
     // If there is a contradiction with the existing bits, return None
-    fn set_3_bits(&self, idx: usize, val: u8) -> Option<Self> {
-        assert!(idx < MAX_LEN_BITS);
-        assert!(val < 8);
+    fn set_3_bits(&self, idx: usize, val: u8) -> Option<Self>;
 
-        let mut new_bits = self.bits;
-        new_bits[idx + 2] = Bit::Set(val & (1 << 2) != 0);
-        new_bits[idx + 1] = Bit::Set(val & (1 << 1) != 0);
-        new_bits[idx] = Bit::Set(val & 1 != 0);
+    // Return the value of the number represented by these bits
+    fn calc(&self) -> u64;
+}
 
-        // check for contradiction
-        for i in 0..3 {
-            if !self.bits[idx + i].check(new_bits[idx + i]) {
-                return None;
+// First representation of bits - using enums, hash maps, and other complex data structures
+// to be more readable
+#[allow(dead_code)]
+mod bits_1 {
+    use super::*;
+    use std::fmt::Display;
+
+    #[derive(Clone, Copy, Debug)]
+    enum Bit {
+        Unset,     // bit can have any value
+        Set(bool), // constrains the bit to this value
+    }
+
+    impl Bit {
+        fn unwrap(&self) -> u64 {
+            match &self {
+                Bit::Unset => 0,
+                Bit::Set(val) => *val as u64,
             }
         }
 
-        let new_bits = Self { bits: new_bits };
-
-        Some(new_bits)
+        // Check if there is a contradiction
+        fn check(&self, other: Self) -> bool {
+            match (&self, &other) {
+                (Bit::Set(val1), Bit::Set(val2)) => val1 == val2,
+                _ => true,
+            }
+        }
     }
 
-    fn calc(&self) -> u64 {
-        let mut result = 0;
-        for bit in self.bits.into_iter().rev() {
-            result = (result << 1) + bit.unwrap();
+    // max length is 3 * 16 (length of program) + 7
+    const MAX_LEN_BITS: usize = 3 * 16 + 7;
+
+    #[derive(Clone, Debug)]
+    pub(super) struct Bits1 {
+        // LSB at index 0
+        bits: [Bit; MAX_LEN_BITS],
+    }
+
+    impl Bits for Bits1 {
+        fn new() -> Self {
+            Self {
+                bits: [Bit::Unset; MAX_LEN_BITS],
+            }
         }
 
-        result
+        // If there is a contradiction with the existing bits, return None
+        fn set_3_bits(&self, idx: usize, val: u8) -> Option<Self> {
+            assert!(idx < MAX_LEN_BITS);
+            assert!(val < 8);
+
+            let mut new_bits = self.bits;
+            new_bits[idx + 2] = Bit::Set(val & (1 << 2) != 0);
+            new_bits[idx + 1] = Bit::Set(val & (1 << 1) != 0);
+            new_bits[idx] = Bit::Set(val & 1 != 0);
+
+            // check for contradiction
+            for i in 0..3 {
+                if !self.bits[idx + i].check(new_bits[idx + i]) {
+                    return None;
+                }
+            }
+
+            let new_bits = Self { bits: new_bits };
+
+            Some(new_bits)
+        }
+
+        fn calc(&self) -> u64 {
+            let mut result = 0;
+            for bit in self.bits.into_iter().rev() {
+                result = (result << 1) + bit.unwrap();
+            }
+
+            result
+        }
+    }
+
+    impl Display for Bits1 {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            let mut s = String::new();
+            for bit in self.bits.into_iter().rev() {
+                let c = match bit {
+                    Bit::Unset => '.',
+                    Bit::Set(val) => {
+                        if val {
+                            '1'
+                        } else {
+                            '0'
+                        }
+                    }
+                };
+
+                s.push(c);
+            }
+
+            f.write_str(&s)
+        }
     }
 }
 
-impl Display for Bits {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut s = String::new();
-        for bit in self.bits.into_iter().rev() {
-            let c = match bit {
-                Bit::Unset => '.',
-                Bit::Set(val) => {
-                    if val {
-                        '1'
-                    } else {
-                        '0'
-                    }
-                }
-            };
+// Alternate representation of bit state to allow for using bit manipulation for efficiency
+mod bits_2 {
+    use super::*;
 
-            s.push(c);
+    #[derive(Clone, Copy, Debug)]
+    pub(super) struct Bits2 {
+        num: u64,
+        // Bitmask representing which bits are constrained, i.e.
+        // bit i of constrained is 1 if bit i of num is constrained to that value
+        constrained: u64,
+    }
+
+    impl Bits for Bits2 {
+        fn new() -> Self {
+            Self {
+                num: 0,
+                // start with no constraints
+                constrained: 0,
+            }
         }
 
-        f.write_str(&s)
+        // If there is a contradiction with the constrained bits, return None
+        fn set_3_bits(&self, idx: usize, val: u8) -> Option<Self> {
+            assert!(idx < 64);
+            assert!(val < 8);
+
+            // Check for contradiction
+            // Create a mask using bitwise AND representing the bits we need to check
+            let mask = self.constrained & (0b111 << idx);
+            // Apply the mask to both self.num and val and use bitwise XOR to see if any bits differ
+            let contradiction = (self.num & mask) ^ (((val as u64) << idx) & mask) > 0;
+
+            if contradiction {
+                return None;
+            }
+
+            // If no contradiction, overwrite the 3 bits in number
+            // and set them to constrained
+            // Create an inverted mask and bitwise AND to set the 3 bits to 0 in the original num, then
+            // bitwise OR to set the 3 bits to val
+            let new_num = (!(0b111 << idx) & self.num) | ((val as u64) << idx);
+            // Bitwise OR to set these 3 bits to 1s
+            let new_constrained = self.constrained | (0b111 << idx);
+
+            Some(Bits2 {
+                num: new_num,
+                constrained: new_constrained,
+            })
+        }
+
+        fn calc(&self) -> u64 {
+            self.num
+        }
     }
 }
 
@@ -298,12 +379,33 @@ mod tests {
     }
 
     // Check answer for part 2
+    // Note we stored the actual puzzle input in 17-2.txt
     #[test]
-    #[ignore = "depends on actual program input"]
     fn test_part_two() {
         let reg_a = 90938893795561;
-        let (mut registers, program) = parse(&advent_of_code::template::read_file("inputs", DAY));
+        let (mut registers, program) = parse(&advent_of_code::template::read_file_part(
+            "examples", DAY, 2,
+        ));
         registers[0] = reg_a;
         assert_eq!(run_program(&mut registers, program.clone()), program);
+    }
+
+    // Check different representations for part 2
+    // Note we stored the actual puzzle input in 17-2.txt
+    #[test]
+    fn test_part_two_bit_representations() {
+        use std::time::Instant;
+
+        let input = &advent_of_code::template::read_file_part("examples", DAY, 2);
+
+        let start1 = Instant::now();
+        let output1 = part_two_inner::<bits_1::Bits1>(input);
+        println!("Part two using Bits1 finished in {:?}", start1.elapsed());
+
+        let start2 = Instant::now();
+        let output2 = part_two_inner::<Bits2>(input);
+        println!("Part two using Bits2 finished in {:?}", start2.elapsed());
+
+        assert_eq!(output1, output2);
     }
 }
