@@ -1,4 +1,8 @@
-use std::{collections::HashSet, fmt::Debug, str::FromStr};
+use std::{
+    collections::HashSet,
+    fmt::{Debug, Display},
+    str::FromStr,
+};
 
 pub mod template;
 
@@ -54,7 +58,7 @@ impl Direction {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Coord {
     pub x: i64,
     pub y: i64,
@@ -77,11 +81,41 @@ impl Coord {
     pub fn diff(&self, other: &Coord) -> (i64, i64) {
         (self.x - other.x, self.y - other.y)
     }
+
+    // No bounds checking
+    pub fn get_neighbors(&self) -> impl Iterator<Item = Coord> + '_ {
+        [(1, 0), (-1, 0), (0, 1), (0, -1)]
+            .into_iter()
+            .map(|(dx, dy)| self.step(dx, dy))
+    }
+
+    // No bounds checking
+    pub fn get_diagonal_neighbors(&self) -> impl Iterator<Item = Coord> + '_ {
+        [(1, -1), (-1, 1), (1, 1), (-1, -1)]
+            .into_iter()
+            .map(|(dx, dy)| self.step(dx, dy))
+    }
+
+    pub fn manhattan_dist(&self, other: &Coord) -> u64 {
+        self.x.abs_diff(other.x) + self.y.abs_diff(other.y)
+    }
 }
 
 impl From<(i64, i64)> for Coord {
     fn from((x, y): (i64, i64)) -> Self {
         Coord::new(x, y)
+    }
+}
+
+impl Debug for Coord {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "({}, {})", self.x, self.y)
+    }
+}
+
+impl Display for Coord {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "({}, {})", self.x, self.y)
     }
 }
 
@@ -133,19 +167,15 @@ impl Dimensions {
     }
 
     pub fn get_neighbors<'a>(&'a self, coord: &'a Coord) -> impl Iterator<Item = Coord> + 'a {
-        [(1, 0), (-1, 0), (0, 1), (0, -1)]
-            .into_iter()
-            .map(|(dx, dy)| coord.step(dx, dy))
-            .filter(|coord| self.in_bounds(coord))
+        coord.get_neighbors().filter(|coord| self.in_bounds(coord))
     }
 
     pub fn get_diagonal_neighbors<'a>(
         &'a self,
         coord: &'a Coord,
     ) -> impl Iterator<Item = Coord> + 'a {
-        [(1, -1), (-1, 1), (1, 1), (-1, -1)]
-            .into_iter()
-            .map(|(dx, dy)| coord.step(dx, dy))
+        coord
+            .get_diagonal_neighbors()
             .filter(|coord| self.in_bounds(coord))
     }
 
